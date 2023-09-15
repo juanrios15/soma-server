@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "django_filters",
     "apps.users",
     "apps.assessments",
+    "apps.attempts",
 ]
 
 MIDDLEWARE = [

@@ -10,7 +10,7 @@ from .serializers import (
     ChoiceSerializer,
     AssessmentDifficultyRatingSerializer,
 )
-from .permissions import AssessmentPermissions
+from .permissions import AssessmentPermissions, QuestionChoicePermissions
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -49,6 +49,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
 
 class QuestionViewSet(viewsets.ModelViewSet):
+    permission_classes = [QuestionChoicePermissions]
     serializer_class = QuestionSerializer
     filterset_fields = {
         "assessment": ("exact", "in"),
@@ -59,6 +60,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
 class ChoiceViewSet(viewsets.ModelViewSet):
+    permission_classes = [QuestionChoicePermissions]
     serializer_class = ChoiceSerializer
     filterset_fields = {
         "question": ("exact", "in"),
