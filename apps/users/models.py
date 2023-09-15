@@ -26,14 +26,10 @@ def content_file_name(instance, filename):
 
 
 class CustomUser(AbstractUser):
-    GENDER_CHOICES = (
-        ("M", "Male"),
-        ("F", "Female"),
-        ("O", "Other"),
-    )
+    GENDER_CHOICES = (("M", "Male"), ("F", "Female"), ("O", "Other"))
     email = models.EmailField(unique=True)
     birthday = models.DateField(auto_now=False, auto_now_add=False, null=True, blank=True)
-    profile_picture = models.FileField(upload_to=content_file_name, null=True, blank=True)
+    profile_picture = models.ImageField(upload_to=content_file_name, null=True, blank=True)
     biography = models.TextField(blank=True, null=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     updated_time = models.DateField(auto_now=True)
