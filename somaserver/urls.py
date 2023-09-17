@@ -23,5 +23,6 @@ urlpatterns = [
     path("api-token-auth/", views.obtain_auth_token),
     path('assessments/', include('apps.assessments.urls', namespace='assessments')),
     path('attempts/', include('apps.attempts.urls', namespace='attempts')),
+    path('users/', include('apps.users.urls', namespace='users')),
     path('api-auth/', include('rest_framework.urls')),
 ]

@@ -12,11 +12,3 @@ class AttemptBasedPermissions(permissions.BasePermission):
             return False
 
         return True
-
-    def has_object_permission(self, request, view, obj):
-        is_attempt = isinstance(obj, Attempt)
-
-        attempt_owner = obj.user if is_attempt else obj.attempt.user
-        assessment_owner = obj.assessment.user if is_attempt else obj.attempt.assessment.user
-
-        return request.user in [attempt_owner, assessment_owner]

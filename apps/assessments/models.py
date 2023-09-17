@@ -42,7 +42,7 @@ class Assessment(models.Model):
     is_private = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    min_score = models.PositiveIntegerField(default=70, validators=[MinValueValidator(60), MaxValueValidator(100)])
+    min_score = models.PositiveIntegerField(default=70, validators=[MinValueValidator(60), MaxValueValidator(90)])
     number_of_questions = models.PositiveIntegerField(
         default=10, validators=[MinValueValidator(5), MaxValueValidator(50)]
     )

@@ -18,7 +18,7 @@ router.register(r"categories", CategoryViewSet, basename="categories")
 router.register(r"subcategories", SubcategoryViewSet, basename="subcategories")
 router.register(r"assessments", AssessmentViewSet, basename="assessments")
 router.register(r"questions", QuestionViewSet, basename="questions")
-router.register(r"choice", ChoiceViewSet, basename="choice")
+router.register(r"choices", ChoiceViewSet, basename="choice")
 router.register(r"assessmentdifficulty", AssessmentDifficultyRatingViewSet, basename="assessmentdifficulty")
 
 

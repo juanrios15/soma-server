@@ -45,18 +45,23 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user))
+        if self.request.user.is_authenticated:
+            return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user))
+        return Assessment.objects.filter(is_private=False)
 
 
 class QuestionViewSet(viewsets.ModelViewSet):
     permission_classes = [QuestionChoicePermissions]
     serializer_class = QuestionSerializer
     filterset_fields = {
+        "description": ("exact", "icontains"),
         "assessment": ("exact", "in"),
     }
 
     def get_queryset(self):
-        return Question.objects.filter(assessment__user=self.request.user)
+        if self.request.user.is_authenticated:
+            return Question.objects.filter(assessment__user=self.request.user)
+        return Question.objects.none()
 
 
 class ChoiceViewSet(viewsets.ModelViewSet):
@@ -68,7 +73,9 @@ class ChoiceViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        return Choice.objects.filter(question__assessment__user=self.request.user)
+        if self.request.user.is_authenticated:
+            return Choice.objects.filter(question__assessment__user=self.request.user)
+        return Choice.objects.none()
 
 
 class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
