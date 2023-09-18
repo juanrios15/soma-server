@@ -18,13 +18,15 @@ class SubcategorySerializer(serializers.ModelSerializer):
 class AssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assessment
-        fields = "__all__"
+        exclude = ["is_private"]
+        read_only_fields = ("user_difficulty_rating", "is_active")
 
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = "__all__"
+        read_only_fields = ("is_active",)
 
 
 class ChoiceSerializer(serializers.ModelSerializer):

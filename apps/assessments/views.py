@@ -47,7 +47,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.is_authenticated:
             return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user))
-        return Assessment.objects.filter(is_private=False)
+        return Assessment.objects.filter(is_private=False, is_active=True)
 
 
 class QuestionViewSet(viewsets.ModelViewSet):
