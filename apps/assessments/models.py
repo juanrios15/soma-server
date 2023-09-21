@@ -69,6 +69,7 @@ class Assessment(models.Model):
     time_limit = models.PositiveIntegerField(default=20, validators=[MinValueValidator(1), MaxValueValidator(120)])
     difficulty = models.FloatField(default=5.0, validators=[MinValueValidator(1.0), MaxValueValidator(10.0)])
     user_difficulty_rating = models.FloatField(default=5.0)
+    average_score = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return self.name

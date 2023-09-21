@@ -19,7 +19,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assessment
         exclude = ["is_private"]
-        read_only_fields = ("user", "user_difficulty_rating", "is_active", "created_at", "updated_at")
+        read_only_fields = ("user", "average_score", "user_difficulty_rating", "is_active", "created_at", "updated_at")
 
 
 class QuestionSerializer(serializers.ModelSerializer):

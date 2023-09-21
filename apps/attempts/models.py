@@ -8,7 +8,7 @@ from apps.assessments.models import Assessment, Question, Choice
 class Attempt(models.Model):
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="attempts")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="attempts")
-    score = models.FloatField(validators=[MinValueValidator(1), MaxValueValidator(100)])
+    score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)], default=0.0)
     approved = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)

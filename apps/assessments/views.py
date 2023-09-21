@@ -17,15 +17,17 @@ from .permissions import AssessmentPermissions, QuestionChoicePermissions
 
 
 def validate_question(question):
+    total_choices = question.choices.count()
+    correct_choices = question.choices.filter(correct_answer=True).count()
     if question.is_multiple_choice:
-        if question.total_choices < 3:
+        if total_choices < 3:
             return "The question should have at least 3 choices."
-        if question.correct_choices < 2:
+        if correct_choices < 2:
             return "The question should have at least 2 correct choices."
     else:
-        if question.total_choices < 2:
+        if total_choices < 2:
             return "The question should have at least 2 choices."
-        if question.correct_choices != 1:
+        if correct_choices != 1:
             return "The question should have only 1 correct choice."
     return None
 
@@ -66,6 +68,9 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user))
         return Assessment.objects.filter(is_private=False, is_active=True)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
     def update(self, request, *args, **kwargs):
         assessment = self.get_object()
@@ -149,6 +154,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["POST"], url_path="validate-and-activate")
     def validate_and_activate(self, request, pk=None):
         question = self.get_object()
+        if question.assessment.user != request.user:
+            return Response(
+                {"error": "You do not have permission to activate this question."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         error_message = validate_question(question)
         if error_message:
@@ -161,6 +170,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["POST"], url_path="validate-and-activate-bulk")
     def validate_and_activate_bulk(self, request):
         question_ids = request.data.get("question_ids", [])
+        user_owned_questions_count = Question.objects.filter(id__in=question_ids, assessment__user=request.user).count()
+        if user_owned_questions_count != len(question_ids):
+            return Response({"error": "Some questions do not belong to you."}, status=status.HTTP_403_FORBIDDEN)
+
         questions = Question.objects.filter(id__in=question_ids).annotate(
             total_choices=Count("choices"),
             correct_choices=Count(Case(When(choices__correct_answer=True, then=1), output_field=IntegerField())),
@@ -188,7 +201,15 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         question = self.get_object()
         if "is_multiple_choice" in request.data and request.data["is_multiple_choice"] != question.is_multiple_choice:
-            request.data["is_active"] = False
+            question.is_active = False
+            question.save()
+        if "assessment" in request.data:
+            try:
+                new_assessment = Assessment.objects.get(pk=request.data["assessment"])
+            except Assessment.DoesNotExist:
+                return Response({"error": "The specified assessment does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+            if new_assessment.user != request.user:
+                return Response({"error": "You can only change to assessments that belong to you."}, status=status.HTTP_403_FORBIDDEN)
 
         return super(QuestionViewSet, self).update(request, *args, **kwargs)
 
@@ -225,6 +246,8 @@ class ChoiceViewSet(viewsets.ModelViewSet):
 
         serializer.save()
         choice = serializer.instance
+        if not question_instance.is_active:
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         if not question_instance.is_multiple_choice and choice.correct_answer:
             existing_correct_choices = question_instance.choices.filter(correct_answer=True, is_active=True).count()
 
