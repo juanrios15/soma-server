@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Prefetch
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,7 +9,7 @@ from rest_framework.serializers import ValidationError
 from .models import Attempt, QuestionAttempt
 from .serializers import AttemptSerializer, QuestionAttemptSerializer
 from .permissions import AttemptBasedPermissions
-from apps.assessments.models import Assessment, Question
+from apps.assessments.models import Assessment, Question, Choice
 
 
 class AttemptViewSet(viewsets.ModelViewSet):
@@ -42,6 +42,24 @@ class AttemptViewSet(viewsets.ModelViewSet):
 
         serializer.save(user=self.request.user)
 
+        # Getting random questions for attempt:
+        number_of_questions = assessment.number_of_questions
+        random_questions = Question.objects.filter(assessment=assessment).order_by("?")[:number_of_questions]
+        random_questions_with_choices = random_questions.prefetch_related(
+            Prefetch("choices", queryset=Choice.objects.all(), to_attr="fetched_choices")
+        )
+        questions_data = [
+            {
+                "question_id": q.id,
+                "description": q.description,
+                "choices": [{"choice_id": c.id, "description": c.description} for c in q.fetched_choices],
+            }
+            for q in random_questions_with_choices
+        ]
+        response_data = serializer.data
+        response_data["questions"] = questions_data
+        return Response(response_data)
+
     def update_assessment_average_score(self, assessment):
         avg_score = Attempt.objects.filter(assessment=assessment, end_time__isnull=False).aggregate(
             avg_score=Avg("score")
@@ -60,6 +78,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
                 {"error": "The attempt exceeded the allowed time limit."}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Calculating score:
         total_questions = attempt.assessment.number_of_questions
         correct_answers_count = attempt.question_attempts.filter(is_correct=True).count()
         attempt.score = (correct_answers_count / total_questions) * 100
@@ -95,6 +114,7 @@ class QuestionAttemptViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         question = Question.objects.get(pk=self.request.data["question"])
 
+        # Checking if answer is correct:
         correct_choices_ids = set(question.choices.filter(correct_answer=True).values_list("id", flat=True))
         selected_choices_ids = set([int(choice_id) for choice_id in self.request.data["selected_choices"]])
 
