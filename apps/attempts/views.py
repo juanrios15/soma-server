@@ -20,6 +20,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         "user": ("exact", "in"),
         "score": ("exact", "gte", "lte"),
         "approved": ("exact",),
+        "start_time": ("exact", "gte", "lte"),
     }
 
     def get_queryset(self):
@@ -106,9 +107,7 @@ class QuestionAttemptViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
-            return QuestionAttempt.objects.filter(
-                Q(attempt__user=self.request.user) | Q(attempt__assessment__user=self.request.user)
-            )
+            return QuestionAttempt.objects.filter(attempt__assessment__user=self.request.user)
         return QuestionAttempt.objects.none()
 
     def perform_create(self, serializer):

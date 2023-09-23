@@ -5,6 +5,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+ENGLISH_LANGUAGE_ID = 1
+
 
 def validate_file_size(value, max_size):
     if value.size > max_size:
@@ -21,6 +23,13 @@ def image_file_size(value):
 
 def general_file_size(value):
     validate_file_size(value, 2 * 1024 * 1024)
+
+
+class Language(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
 
 
 class Category(models.Model):
@@ -53,6 +62,7 @@ def content_file_name(instance, filename):
 class Assessment(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
+    language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True, related_name="assessments")
     minimum_requirements = models.TextField(blank=True, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE)
@@ -127,6 +137,8 @@ class AssessmentDifficultyRating(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="difficulty_ratings_given"
     )
     difficulty = models.FloatField(validators=[MinValueValidator(1), MaxValueValidator(10)])
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Assessment difficulty rating"
@@ -135,3 +147,18 @@ class AssessmentDifficultyRating(models.Model):
 
     def __str__(self):
         return f"{self.user.username} rated {self.assessment} with {self.difficulty} difficulty"
+
+
+class FollowAssessment(models.Model):
+    follower = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following_assessments"
+    )
+    assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="assessments_followed")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("follower", "assessment")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.follower} -> {self.assessment}"

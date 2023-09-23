@@ -1,19 +1,22 @@
-from django.db.models import Q, Count, Case, When, IntegerField
+from django.db.models import Q, Count, Avg, Case, When, IntegerField
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating
+from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
 from .serializers import (
     CategorySerializer,
     SubcategorySerializer,
     AssessmentSerializer,
+    AssessmentDetailSerializer,
     QuestionSerializer,
     ChoiceSerializer,
     AssessmentDifficultyRatingSerializer,
+    FollowAssessmentSerializer,
 )
-from .permissions import AssessmentPermissions, QuestionChoicePermissions
+from .permissions import AssessmentPermissions, QuestionChoicePermissions, FollowAssessmentPermissions
+from apps.attempts.models import Attempt
 
 
 def validate_question(question):
@@ -62,7 +65,14 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         "difficulty": ("exact", "gte", "lte"),
         "user_difficulty_rating": ("exact", "gte", "lte"),
         "is_active": ("exact",),
+        "created_at": ("exact", "gte", "lte"),
+        "updated_at": ("exact", "gte", "lte"),
     }
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return AssessmentDetailSerializer
+        return AssessmentSerializer
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -129,6 +139,8 @@ class QuestionViewSet(viewsets.ModelViewSet):
         "assessment": ("exact", "in"),
         "is_active": ("exact",),
         "is_multiple_choice": ("exact",),
+        "created_at": ("exact", "gte", "lte"),
+        "updated_at": ("exact", "gte", "lte"),
     }
 
     def get_queryset(self):
@@ -207,9 +219,14 @@ class QuestionViewSet(viewsets.ModelViewSet):
             try:
                 new_assessment = Assessment.objects.get(pk=request.data["assessment"])
             except Assessment.DoesNotExist:
-                return Response({"error": "The specified assessment does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "The specified assessment does not exist."}, status=status.HTTP_400_BAD_REQUEST
+                )
             if new_assessment.user != request.user:
-                return Response({"error": "You can only change to assessments that belong to you."}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"error": "You can only change to assessments that belong to you."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         return super(QuestionViewSet, self).update(request, *args, **kwargs)
 
@@ -272,3 +289,53 @@ class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
         "user": ("exact", "in"),
         "difficulty": ("exact", "gte", "lte"),
     }
+
+    def update_assessment_rating(self, assessment):
+        average_rating = AssessmentDifficultyRating.objects.filter(assessment=assessment).aggregate(
+            average=Avg("difficulty")
+        )["average"]
+        assessment.user_difficulty_rating = average_rating
+        assessment.save(update_fields=["user_difficulty_rating"])
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        assessment = serializer.validated_data.get("assessment")
+        has_completed_attempt = Attempt.objects.filter(
+            user=user, assessment=assessment, end_time__isnull=False
+        ).exists()
+        if not has_completed_attempt:
+            raise ValidationError("You must complete the assessment before rating its difficulty.")
+        serializer.save(user=user)
+        self.update_assessment_rating(assessment)
+
+    def perform_update(self, serializer):
+        if set(serializer.validated_data.keys()) != {"difficulty"}:
+            raise ValidationError("Solo se puede modificar el campo de difficulty")
+        super().perform_update(serializer)
+
+        assessment = serializer.instance.assessment
+        self.update_assessment_rating(assessment)
+
+    def perform_destroy(self, instance):
+        assessment = instance.assessment
+        super().perform_destroy(instance)
+
+        self.update_assessment_rating(assessment)
+
+
+class FollowAssessmentViewSet(viewsets.ModelViewSet):
+    queryset = FollowAssessment.objects.all()
+    serializer_class = FollowAssessmentSerializer
+    permission_classes = [FollowAssessmentPermissions]
+    http_method_names = ["get", "post", "delete", "head", "options"]
+    filterset_fields = {
+        "assessment": ("exact", "in"),
+        "follower": ("exact", "in"),
+        "created_at": ("exact", "gte", "lte"),
+    }
+
+    def get_queryset(self):
+        return FollowAssessment.objects.filter(follower__is_active=True, assessment__is_active=True)
+
+    def perform_create(self, serializer):
+        serializer.save(follower=self.request.user)

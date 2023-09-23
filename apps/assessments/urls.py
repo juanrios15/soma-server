@@ -8,6 +8,7 @@ from .views import (
     QuestionViewSet,
     ChoiceViewSet,
     AssessmentDifficultyRatingViewSet,
+    FollowAssessmentViewSet,
 )
 
 
@@ -19,7 +20,8 @@ router.register(r"subcategories", SubcategoryViewSet, basename="subcategories")
 router.register(r"assessments", AssessmentViewSet, basename="assessments")
 router.register(r"questions", QuestionViewSet, basename="questions")
 router.register(r"choices", ChoiceViewSet, basename="choice")
-router.register(r"assessmentdifficulty", AssessmentDifficultyRatingViewSet, basename="assessmentdifficulty")
+router.register(r"assessments-difficulty", AssessmentDifficultyRatingViewSet, basename="assessmentsdifficulty")
+router.register(r"follow-assessments", FollowAssessmentViewSet, basename="followassessments")
 
 
 urlpatterns = [
