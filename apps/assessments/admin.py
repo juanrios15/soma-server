@@ -1,8 +1,9 @@
 from django.contrib import admin
 
-from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
+from .models import Language, Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
 
 
+admin.site.register(Language)
 admin.site.register(Category)
 admin.site.register(Subcategory)
 admin.site.register(Assessment)

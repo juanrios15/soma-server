@@ -42,11 +42,14 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+def subcategory_image_upload(instance, filename):
+    return f"categories/{filename}"
 
 class Subcategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField()
+    image = models.ImageField(upload_to=subcategory_image_upload, validators=[image_file_size], blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Subcategories"

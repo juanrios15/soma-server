@@ -3,7 +3,14 @@ from rest_framework import serializers
 from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
 
 
+class SubcategoryReadOnlySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subcategory
+        fields = ['name', 'image']
+
+
 class CategorySerializer(serializers.ModelSerializer):
+    subcategories = SubcategoryReadOnlySerializer(many=True, read_only=True, source='subcategory_set')
     class Meta:
         model = Category
         fields = "__all__"
