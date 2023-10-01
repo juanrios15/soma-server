@@ -76,8 +76,8 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
-            return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user))
-        return Assessment.objects.filter(is_private=False, is_active=True)
+            return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user)).order_by("id")
+        return Assessment.objects.filter(is_private=False, is_active=True).order_by("id")
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

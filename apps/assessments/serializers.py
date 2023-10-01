@@ -23,6 +23,8 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
+    subcategory_name = serializers.ReadOnlyField(source='subcategory.name')
+    user_username = serializers.ReadOnlyField(source='user.username')
     class Meta:
         model = Assessment
         exclude = ["is_private"]
