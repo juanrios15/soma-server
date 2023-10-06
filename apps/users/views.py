@@ -1,6 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-from .serializers import UserSerializer, UserDetailSerializer, FollowSerializer
+from .serializers import UserSerializer, UserDetailSerializer, UserMeSerializer, FollowSerializer
 from .models import CustomUser, Follow
 from .permissions import CustomUserPermissions, FollowPermissions
 
@@ -12,7 +14,19 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return UserDetailSerializer
+        elif self.action == "me":
+            return UserMeSerializer
         return UserSerializer
+
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request, *args, **kwargs):
+        """
+        Return basic information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = self.get_serializer_class()(request.user)
+        return Response(serializer.data)
 
 
 class FollowViewSet(viewsets.ModelViewSet):

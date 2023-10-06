@@ -55,6 +55,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return FollowAssessment.objects.filter(follower=obj, assessment__is_active=True).count()
 
 
+class UserMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ["username", "first_name", "email", "date_joined"]
+
+
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
