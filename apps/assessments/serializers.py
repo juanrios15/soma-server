@@ -23,8 +23,8 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
-    subcategory_name = serializers.ReadOnlyField(source='subcategory.name')
     user_username = serializers.ReadOnlyField(source='user.username')
+    subcategory_name = serializers.ReadOnlyField(source='subcategory.name')
     class Meta:
         model = Assessment
         exclude = ["is_private"]
@@ -32,6 +32,10 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 
 class AssessmentDetailSerializer(serializers.ModelSerializer):
+    language_name = serializers.ReadOnlyField(source='language.name')
+    category_name = serializers.ReadOnlyField(source='subcategory.category.name')
+    subcategory_name = serializers.ReadOnlyField(source='subcategory.name')
+    user_username = serializers.ReadOnlyField(source='user.username')
     followers_count = serializers.SerializerMethodField()
 
     class Meta:
