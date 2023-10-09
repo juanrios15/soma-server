@@ -4,6 +4,8 @@ from .models import Attempt, QuestionAttempt
 
 
 class AttemptSerializer(serializers.ModelSerializer):
+    assessment_time_limit = serializers.ReadOnlyField(source="assessment.time_limit")
+
     class Meta:
         model = Attempt
         fields = "__all__"

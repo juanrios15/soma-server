@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timedelta
 
 from django.db.models import Q, Avg, Prefetch
@@ -43,23 +44,34 @@ class AttemptViewSet(viewsets.ModelViewSet):
 
         serializer.save(user=self.request.user)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
         # Getting random questions for attempt:
-        number_of_questions = assessment.number_of_questions
-        random_questions = Question.objects.filter(assessment=assessment).order_by("?")[:number_of_questions]
-        random_questions_with_choices = random_questions.prefetch_related(
-            Prefetch("choices", queryset=Choice.objects.all(), to_attr="fetched_choices")
-        )
-        questions_data = [
-            {
-                "question_id": q.id,
-                "description": q.description,
-                "choices": [{"choice_id": c.id, "description": c.description} for c in q.fetched_choices],
-            }
-            for q in random_questions_with_choices
-        ]
-        response_data = serializer.data
-        response_data["questions"] = questions_data
-        return Response(response_data)
+        if request.user == instance.user and not instance.questions_provided:
+            assessment = instance.assessment
+            number_of_questions = assessment.number_of_questions
+            random_questions = Question.objects.filter(assessment=assessment).order_by("?")[:number_of_questions]
+            random_questions_with_choices = random_questions.prefetch_related(
+                Prefetch("choices", queryset=Choice.objects.all(), to_attr="fetched_choices")
+            )
+            questions_data = [
+                {
+                    "question_id": q.id,
+                    "description": q.description,
+                    "choices": [
+                        {"choice_id": c.id, "description": c.description}
+                        for c in random.sample(q.fetched_choices, len(q.fetched_choices))
+                    ],
+                }
+                for q in random_questions_with_choices
+            ]
+            response_data = serializer.data
+            response_data["questions"] = questions_data
+            instance.questions_provided = True
+            instance.save(update_fields=["questions_provided"])
+            return Response(response_data)
+        return Response(serializer.data)
 
     def update_assessment_average_score(self, assessment):
         avg_score = Attempt.objects.filter(assessment=assessment, end_time__isnull=False).aggregate(
@@ -78,6 +90,28 @@ class AttemptViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "The attempt exceeded the allowed time limit."}, status=status.HTTP_400_BAD_REQUEST
             )
+        answers = request.data.get("answers", [])
+        question_attempts_to_create = []
+        for answer in answers:
+            question_id = answer.get("question_id")
+            selected_choices = set(answer.get("choices", []))
+
+            try:
+                question = Question.objects.get(pk=question_id)
+            except Question.DoesNotExist:
+                return Response(
+                    {"error": f"Question with id {question_id} does not exist."}, status=status.HTTP_400_BAD_REQUEST
+                )
+            correct_choices_ids = set(question.choices.filter(correct_answer=True).values_list("id", flat=True))
+            is_correct = correct_choices_ids == selected_choices
+
+            question_attempts_to_create.append(
+                QuestionAttempt(attempt=attempt, question_id=question_id, is_correct=is_correct)
+            )   
+            QuestionAttempt.objects.bulk_create(question_attempts_to_create)
+
+            for qa, answer in zip(question_attempts_to_create, answers):
+                qa.selected_choices.set(answer.get('choices', []))
 
         # Calculating score:
         total_questions = attempt.assessment.number_of_questions
