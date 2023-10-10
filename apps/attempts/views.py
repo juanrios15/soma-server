@@ -80,7 +80,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         assessment.average_score = avg_score or 0
         assessment.save()
 
-    @action(detail=True, methods=["POST"], url_path="finalize")
+    @action(detail=True, methods=["POST"])
     def finalize_attempt(self, request, pk=None):
         attempt = self.get_object()
         attempt.end_time = datetime.now()
@@ -118,6 +118,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         correct_answers_count = attempt.question_attempts.filter(is_correct=True).count()
         attempt.score = (correct_answers_count / total_questions) * 100
         attempt.approved = attempt.score >= attempt.assessment.min_score
+        attempt.is_finished = True
         attempt.save()
 
         self.update_assessment_average_score(attempt.assessment)

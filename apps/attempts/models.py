@@ -11,6 +11,7 @@ class Attempt(models.Model):
     score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)], default=0.0)
     approved = models.BooleanField(default=False)
     questions_provided = models.BooleanField(default=False)
+    is_finished = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
 
