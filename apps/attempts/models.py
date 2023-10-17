@@ -26,4 +26,4 @@ class QuestionAttempt(models.Model):
     is_correct = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Question Attempt for {self.attempt.user.username} - {self.question.text}"
+        return f"Question Attempt for {self.attempt.user.username} - {self.question.description}"

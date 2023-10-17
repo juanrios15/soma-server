@@ -2,6 +2,7 @@ import random
 from datetime import datetime, timedelta
 
 from django.db.models import Q, Avg, Prefetch
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -83,14 +84,16 @@ class AttemptViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["POST"])
     def finalize_attempt(self, request, pk=None):
         attempt = self.get_object()
-        attempt.end_time = datetime.now()
+        attempt.end_time = timezone.now()
 
         expected_end_time = attempt.start_time + timedelta(minutes=attempt.assessment.time_limit)
         if attempt.end_time > expected_end_time:
             return Response(
                 {"error": "The attempt exceeded the allowed time limit."}, status=status.HTTP_400_BAD_REQUEST
             )
-        answers = request.data.get("answers", [])
+        if not isinstance(request.data, list):
+            return Response({"error": "Expected a list of answers."}, status=status.HTTP_400_BAD_REQUEST)
+        answers = request.data
         question_attempts_to_create = []
         for answer in answers:
             question_id = answer.get("question_id")
@@ -108,10 +111,10 @@ class AttemptViewSet(viewsets.ModelViewSet):
             question_attempts_to_create.append(
                 QuestionAttempt(attempt=attempt, question_id=question_id, is_correct=is_correct)
             )   
-            QuestionAttempt.objects.bulk_create(question_attempts_to_create)
+        QuestionAttempt.objects.bulk_create(question_attempts_to_create)
 
-            for qa, answer in zip(question_attempts_to_create, answers):
-                qa.selected_choices.set(answer.get('choices', []))
+        for qa, answer in zip(question_attempts_to_create, answers):
+            qa.selected_choices.set(answer.get('choices', []))
 
         # Calculating score:
         total_questions = attempt.assessment.number_of_questions
