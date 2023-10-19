@@ -86,7 +86,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         attempt = self.get_object()
         attempt.end_time = timezone.now()
 
-        expected_end_time = attempt.start_time + timedelta(minutes=attempt.assessment.time_limit)
+        expected_end_time = attempt.start_time + timedelta(minutes=attempt.assessment.time_limit, seconds=5)
         if attempt.end_time > expected_end_time:
             return Response(
                 {"error": "The attempt exceeded the allowed time limit."}, status=status.HTTP_400_BAD_REQUEST
