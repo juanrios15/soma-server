@@ -24,6 +24,8 @@ class AttemptViewSet(viewsets.ModelViewSet):
         "approved": ("exact",),
         "start_time": ("exact", "gte", "lte"),
     }
+    ordering_fields = ["start_time"]
+    ordering = ["start_time"]
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -110,11 +112,11 @@ class AttemptViewSet(viewsets.ModelViewSet):
 
             question_attempts_to_create.append(
                 QuestionAttempt(attempt=attempt, question_id=question_id, is_correct=is_correct)
-            )   
+            )
         QuestionAttempt.objects.bulk_create(question_attempts_to_create)
 
         for qa, answer in zip(question_attempts_to_create, answers):
-            qa.selected_choices.set(answer.get('choices', []))
+            qa.selected_choices.set(answer.get("choices", []))
 
         # Calculating score:
         total_questions = attempt.assessment.number_of_questions

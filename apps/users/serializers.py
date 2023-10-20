@@ -1,7 +1,9 @@
+from django.db.models import Avg, Count, Case, When, FloatField
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import Follow
+from apps.attempts.models import Attempt
 from apps.assessments.models import FollowAssessment
 
 
@@ -40,6 +42,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     following_assessments_count = serializers.SerializerMethodField()
+    attempts_count = serializers.SerializerMethodField()
+    average_score = serializers.SerializerMethodField()
+    total_approved = serializers.SerializerMethodField()
+    approved_percentage = serializers.SerializerMethodField()
+    full_score_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -57,7 +64,21 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "follower_count",
             "following_count",
             "following_assessments_count",
+            "attempts_count",
+            "average_score",
+            "total_approved",
+            "approved_percentage",
+            "full_score_percentage",
         ]
+
+    def get_attempt_statistics(self, obj):
+        if not hasattr(obj, "_attempt_stats_cache"):
+            obj._attempt_stats_cache = Attempt.objects.filter(user=obj).aggregate(
+                total_approved=Count(Case(When(approved=True, then=1))),
+                total_attempts=Count("id"),
+                full_score_attempts=Count(Case(When(score=100, then=1))),
+            )
+        return obj._attempt_stats_cache
 
     def get_follower_count(self, obj):
         return Follow.objects.filter(followed=obj, follower__is_active=True).count()
@@ -67,6 +88,27 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_following_assessments_count(self, obj):
         return FollowAssessment.objects.filter(follower=obj, assessment__is_active=True).count()
+
+    def get_attempts_count(self, obj):
+        return self.get_attempt_statistics(obj)["total_attempts"]
+
+    def get_average_score(self, obj):
+        return Attempt.objects.filter(user=obj).aggregate(average_score=Avg("score"))["average_score"] or 0
+
+    def get_total_approved(self, obj):
+        return self.get_attempt_statistics(obj)["total_approved"]
+
+    def get_approved_percentage(self, obj):
+        stats = self.get_attempt_statistics(obj)
+        if not stats["total_attempts"]:
+            return 0
+        return (stats["total_approved"] / stats["total_attempts"]) * 100
+
+    def get_full_score_percentage(self, obj):
+        stats = self.get_attempt_statistics(obj)
+        if not stats["total_attempts"]:
+            return 0
+        return (stats["full_score_attempts"] / stats["total_attempts"]) * 100
 
 
 class UserMeSerializer(serializers.ModelSerializer):
