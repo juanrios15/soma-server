@@ -43,7 +43,21 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = "__all__"
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "date_joined",
+            "birthday",
+            "profile_picture",
+            "biography",
+            "gender",
+            "follower_count",
+            "following_count",
+            "following_assessments_count",
+        ]
 
     def get_follower_count(self, obj):
         return Follow.objects.filter(followed=obj, follower__is_active=True).count()
@@ -58,7 +72,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ["username", "first_name", "email", "date_joined"]
+        fields = ["id", "username", "first_name", "email", "date_joined"]
 
 
 class FollowSerializer(serializers.ModelSerializer):
