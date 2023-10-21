@@ -39,6 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     following_assessments_count = serializers.SerializerMethodField()
@@ -47,6 +48,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     total_approved = serializers.SerializerMethodField()
     approved_percentage = serializers.SerializerMethodField()
     full_score_percentage = serializers.SerializerMethodField()
+    is_self = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -60,7 +62,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "birthday",
             "profile_picture",
             "biography",
-            "gender",
+            "gender_display",
             "follower_count",
             "following_count",
             "following_assessments_count",
@@ -69,6 +71,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "total_approved",
             "approved_percentage",
             "full_score_percentage",
+            "is_self",
         ]
 
     def get_attempt_statistics(self, obj):
@@ -109,6 +112,10 @@ class UserDetailSerializer(serializers.ModelSerializer):
         if not stats["total_attempts"]:
             return 0
         return (stats["full_score_attempts"] / stats["total_attempts"]) * 100
+
+    def get_is_self(self, obj):
+        user = self.context.get('request').user
+        return user == obj
 
 
 class UserMeSerializer(serializers.ModelSerializer):

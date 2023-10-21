@@ -36,7 +36,7 @@ def validate_question(question):
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().order_by('id')
     serializer_class = CategorySerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
@@ -44,7 +44,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class SubcategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Subcategory.objects.all()
+    queryset = Subcategory.objects.all().order_by('id')
     serializer_class = SubcategorySerializer
     filterset_fields = {
         "category": ("exact", "in"),
