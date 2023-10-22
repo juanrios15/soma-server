@@ -25,9 +25,18 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        serializer = self.get_serializer_class()(request.user)
+        serializer = self.get_serializer_class()(request.user, context={'request': request})
         return Response(serializer.data)
 
+    @action(detail=False, methods=['GET'], url_path='top-scores')
+    def top_scores(self, request, *args, **kwargs):
+        """
+        Get the top 20 users based on average_score.
+        """
+        top_users = CustomUser.objects.order_by('-average_score')[:20]
+        # TODO: Usar un serializador con menos informacion para no consumir tanto...
+        serializer = UserDetailSerializer(top_users, many=True, context={'request': request})
+        return Response(serializer.data)
 
 class FollowViewSet(viewsets.ModelViewSet):
     queryset = Follow.objects.all()

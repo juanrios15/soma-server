@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    gender_display = serializers.CharField(source='get_gender_display', read_only=True)
+    gender_display = serializers.CharField(source="get_gender_display", read_only=True)
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
     following_assessments_count = serializers.SerializerMethodField()
@@ -114,17 +114,33 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return (stats["full_score_attempts"] / stats["total_attempts"]) * 100
 
     def get_is_self(self, obj):
-        user = self.context.get('request').user
+        user = self.context.get("request").user
         return user == obj
 
 
 class UserMeSerializer(serializers.ModelSerializer):
+    picture = serializers.SerializerMethodField()
     class Meta:
         model = get_user_model()
-        fields = ["id", "username", "first_name", "email", "date_joined"]
+        fields = ["id", "username", "first_name", "email", "date_joined", "picture"]
 
+    def get_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            print("ponga", obj.profile_picture.url)
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
 
 class FollowSerializer(serializers.ModelSerializer):
+    follower_username = serializers.ReadOnlyField(source="follower.username")
+    followed_username = serializers.ReadOnlyField(source="followed.username")
+    follower_first_name = serializers.ReadOnlyField(source="follower.first_name")
+    followed_first_name = serializers.ReadOnlyField(source="followed.first_name")
+    follower_last_name = serializers.ReadOnlyField(source="follower.last_name")
+    followed_last_name = serializers.ReadOnlyField(source="followed.last_name")
+    follower_profile_picture = serializers.SerializerMethodField()
+    followed_profile_picture = serializers.SerializerMethodField()
+
     class Meta:
         model = Follow
         fields = "__all__"
@@ -138,3 +154,15 @@ class FollowSerializer(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError("'followed' field is required.")
         return data
+
+    def get_follower_profile_picture(self, obj):
+        if obj.follower.profile_picture:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.follower.profile_picture.url)
+        return None
+
+    def get_followed_profile_picture(self, obj):
+        if obj.followed.profile_picture:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.followed.profile_picture.url)
+        return None

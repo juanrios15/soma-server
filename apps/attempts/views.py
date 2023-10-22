@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timedelta
 
-from django.db.models import Q, Avg, Prefetch
+from django.db.models import Q, Avg, Prefetch, Max
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -83,6 +83,15 @@ class AttemptViewSet(viewsets.ModelViewSet):
         assessment.average_score = avg_score or 0
         assessment.save()
 
+    def update_user_average_score(self, user):
+        """
+        Update the user's average score based on the best score for each assessment.
+        """
+        best_scores = Attempt.objects.filter(user=user).values("assessment").annotate(best_score=Max("score"))
+        average_score = best_scores.aggregate(avg_best_score=Avg("best_score"))["avg_best_score"] or 0
+        user.average_score = average_score
+        user.save()
+
     @action(detail=True, methods=["POST"])
     def finalize_attempt(self, request, pk=None):
         attempt = self.get_object()
@@ -125,6 +134,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         attempt.approved = attempt.score >= attempt.assessment.min_score
         attempt.is_finished = True
         attempt.save()
+        self.update_user_average_score(attempt.user)
 
         self.update_assessment_average_score(attempt.assessment)
 

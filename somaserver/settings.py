@@ -41,6 +41,7 @@ DEBUG = get_secret("DEBUG")
 
 ALLOWED_HOSTS = []
 
+SITE_URL = 'http://localhost.com:8000'
 
 # Application definition
 

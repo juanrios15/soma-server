@@ -78,7 +78,27 @@ class AssessmentDifficultyRatingSerializer(serializers.ModelSerializer):
 
 
 class FollowAssessmentSerializer(serializers.ModelSerializer):
+    assessment_name = serializers.ReadOnlyField(source="assessment.name")
+    assessment_language = serializers.ReadOnlyField(source="assessment.language.name")
+    assessment_min_score = serializers.ReadOnlyField(source="assessment.min_score")
+    assessment_allowed_attempts = serializers.ReadOnlyField(source="assessment.allowed_attempts")
+    picture = serializers.SerializerMethodField()
+    available_attempts = serializers.SerializerMethodField()
+
     class Meta:
         model = FollowAssessment
         fields = "__all__"
         read_only_fields = ["follower", "created_at"]
+
+    def get_picture(self, obj):
+        if obj.assessment.image:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.assessment.image.url)
+        return None
+
+    def get_available_attempts(self, obj):
+        user = self.context["request"].user
+        if user.is_authenticated:
+            attempts_made = Attempt.objects.filter(user=user, assessment=obj.assessment).count()
+            return obj.assessment.allowed_attempts - attempts_made
+        return 0

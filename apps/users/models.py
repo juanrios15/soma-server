@@ -33,6 +33,7 @@ class CustomUser(AbstractUser):
     biography = models.TextField(blank=True, null=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     updated_time = models.DateField(auto_now=True)
+    average_score = models.FloatField(default=0)
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
