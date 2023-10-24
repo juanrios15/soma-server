@@ -14,6 +14,7 @@ class Attempt(models.Model):
     is_finished = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
+    points_obtained = models.IntegerField(default=0)
 
     def __str__(self):
         return f"Attempt by {self.user.username} on {self.assessment.name} - Score: {self.score}"

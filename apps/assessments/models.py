@@ -1,11 +1,7 @@
-import os
-
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
-
-ENGLISH_LANGUAGE_ID = 1
 
 
 def validate_file_size(value, max_size):
@@ -42,8 +38,10 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+
 def subcategory_image_upload(instance, filename):
     return f"categories/{filename}"
+
 
 class Subcategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
@@ -81,7 +79,7 @@ class Assessment(models.Model):
     allowed_attempts = models.PositiveIntegerField(default=2, validators=[MinValueValidator(2), MaxValueValidator(10)])
     time_limit = models.PositiveIntegerField(default=20, validators=[MinValueValidator(1), MaxValueValidator(120)])
     difficulty = models.FloatField(default=5.0, validators=[MinValueValidator(1.0), MaxValueValidator(10.0)])
-    user_difficulty_rating = models.FloatField(default=5.0)
+    user_difficulty_rating = models.FloatField(null=True, blank=True)
     average_score = models.FloatField(null=True, blank=True)
 
     def __str__(self):

@@ -12,6 +12,7 @@ from .models import Attempt, QuestionAttempt
 from .serializers import AttemptSerializer, QuestionAttemptSerializer
 from .permissions import AttemptBasedPermissions
 from apps.assessments.models import Assessment, Question, Choice
+from apps.users.models import UserPoints
 
 
 class AttemptViewSet(viewsets.ModelViewSet):
@@ -44,7 +45,8 @@ class AttemptViewSet(viewsets.ModelViewSet):
         previous_attempts_count = Attempt.objects.filter(assessment=assessment, user=self.request.user).count()
         if previous_attempts_count >= assessment.allowed_attempts:
             raise ValidationError("You don't have any attempts left for this assessment.")
-
+        self.update_assessment_average_score(assessment)
+        self.update_user_average_score(self.request.user)
         serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
@@ -77,9 +79,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def update_assessment_average_score(self, assessment):
-        avg_score = Attempt.objects.filter(assessment=assessment, end_time__isnull=False).aggregate(
-            avg_score=Avg("score")
-        )["avg_score"]
+        avg_score = Attempt.objects.filter(assessment=assessment).aggregate(avg_score=Avg("score"))["avg_score"]
         assessment.average_score = avg_score or 0
         assessment.save()
 
@@ -91,6 +91,12 @@ class AttemptViewSet(viewsets.ModelViewSet):
         average_score = best_scores.aggregate(avg_best_score=Avg("best_score"))["avg_best_score"] or 0
         user.average_score = average_score
         user.save()
+
+    def calculate_points(self, assessment, score):
+        """Helper function to calculate points based on the formula."""
+        D_teacher = assessment.difficulty
+        D_students = assessment.user_difficulty_rating or D_teacher
+        return score * ((D_teacher + D_students) / 20.0)
 
     @action(detail=True, methods=["POST"])
     def finalize_attempt(self, request, pk=None):
@@ -132,14 +138,38 @@ class AttemptViewSet(viewsets.ModelViewSet):
         correct_answers_count = attempt.question_attempts.filter(is_correct=True).count()
         attempt.score = (correct_answers_count / total_questions) * 100
         attempt.approved = attempt.score >= attempt.assessment.min_score
+        # Calculating points:
+        attempt.points_obtained = self.calculate_points(attempt.assessment, attempt.score)
+        best_attempt = (
+            Attempt.objects.filter(evaluacion=attempt.assessment, user=request.user)
+            .exclude(pk=attempt.pk)
+            .order_by("-points")
+            .first()
+        )
+        user_points, created = UserPoints.objects.get_or_create(
+            user=attempt.user, category=attempt.assessment.subcategory.category, defaults={"total_points": 0}
+        )
+        if not best_attempt or attempt.points_obtained > best_attempt.points_obtained:
+            if best_attempt:
+                difference = attempt.points_obtained - best_attempt.points_obtained
+                attempt.user.points += difference
+                user_points.total_points += difference
+            else:
+                attempt.user.points += attempt.points_obtained
+                user_points.total_points += attempt.points_obtained
+            attempt.user.save()
+            user_points.save()
         attempt.is_finished = True
         attempt.save()
         self.update_user_average_score(attempt.user)
-
         self.update_assessment_average_score(attempt.assessment)
-
         return Response(
-            {"detail": "Attempt finalized successfully.", "score": attempt.score, "approved": attempt.approved},
+            {
+                "detail": "Attempt finalized successfully.",
+                "score": attempt.score,
+                "approved": attempt.approved,
+                "points": attempt.points,
+            },
             status=status.HTTP_200_OK,
         )
 

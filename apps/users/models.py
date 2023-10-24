@@ -7,6 +7,8 @@ from django.db.models.signals import post_save
 from django.contrib.auth.models import AbstractUser, UserManager
 from rest_framework.authtoken.models import Token
 
+from apps.assessments.models import Category
+
 
 class MrvUserManager(UserManager):
     def create_superuser(self, email, password, **extra_fields):
@@ -34,6 +36,7 @@ class CustomUser(AbstractUser):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     updated_time = models.DateField(auto_now=True)
     average_score = models.FloatField(default=0)
+    points = models.IntegerField(default=0)
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -45,6 +48,18 @@ class CustomUser(AbstractUser):
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
         Token.objects.create(user=instance)
+
+
+class UserPoints(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    total_points = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("user", "category")
+
+    def __str__(self):
+        return f"{self.user.email} - {self.category.name} - {self.total_points} points"
 
 
 class Follow(models.Model):

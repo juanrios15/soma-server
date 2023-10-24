@@ -1,8 +1,8 @@
-from django.db.models import Avg, Count, Case, When, FloatField
+from django.db.models import Avg, Count, Case, When
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Follow
+from .models import Follow, UserPoints
 from apps.attempts.models import Attempt
 from apps.assessments.models import FollowAssessment
 
@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ("username", "email", "password", "password2")
+        fields = ("username", "email", "password", "password2", "average_score", "points")
         extra_kwargs = {"password": {"write_only": True, "style": {"input_type": "password"}}}
 
     def validate_password(self, value):
@@ -120,16 +120,24 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
+
     class Meta:
         model = get_user_model()
         fields = ["id", "username", "first_name", "email", "date_joined", "picture"]
 
     def get_picture(self, obj):
         if obj.profile_picture:
-            request = self.context.get('request')
+            request = self.context.get("request")
             print("ponga", obj.profile_picture.url)
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
+
+
+class UserPointsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPoints
+        fields = "__all__"
+
 
 class FollowSerializer(serializers.ModelSerializer):
     follower_username = serializers.ReadOnlyField(source="follower.username")
@@ -157,12 +165,12 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_follower_profile_picture(self, obj):
         if obj.follower.profile_picture:
-            request = self.context.get('request')
+            request = self.context.get("request")
             return request.build_absolute_uri(obj.follower.profile_picture.url)
         return None
 
     def get_followed_profile_picture(self, obj):
         if obj.followed.profile_picture:
-            request = self.context.get('request')
+            request = self.context.get("request")
             return request.build_absolute_uri(obj.followed.profile_picture.url)
         return None
