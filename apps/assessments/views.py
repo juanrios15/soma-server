@@ -67,7 +67,10 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         "is_active": ("exact",),
         "created_at": ("exact", "gte", "lte"),
         "updated_at": ("exact", "gte", "lte"),
+        "average_score": ("gte", "lte"),
+        "attempts_count": ("gte", "lte"),
     }
+    ordering_fields = ["attempts_count", "difficulty", "user_difficulty_rating", "average_score"]
 
     def get_serializer_class(self):
         if self.action == "retrieve":
