@@ -57,6 +57,7 @@ class UserPoints(models.Model):
 
     class Meta:
         unique_together = ("user", "category")
+        verbose_name_plural = "User Points"
 
     def __str__(self):
         return f"{self.user.email} - {self.category.name} - {self.total_points} points"

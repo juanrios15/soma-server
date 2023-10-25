@@ -81,6 +81,7 @@ class Assessment(models.Model):
     difficulty = models.FloatField(default=5.0, validators=[MinValueValidator(1.0), MaxValueValidator(10.0)])
     user_difficulty_rating = models.FloatField(null=True, blank=True)
     average_score = models.FloatField(null=True, blank=True)
+    attempts_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name

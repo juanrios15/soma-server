@@ -45,6 +45,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
         previous_attempts_count = Attempt.objects.filter(assessment=assessment, user=self.request.user).count()
         if previous_attempts_count >= assessment.allowed_attempts:
             raise ValidationError("You don't have any attempts left for this assessment.")
+        assessment.attempts_count = Attempt.objects.filter(assessment=assessment).count() + 1
         self.update_assessment_average_score(assessment)
         self.update_user_average_score(self.request.user)
         serializer.save(user=self.request.user)
@@ -141,9 +142,9 @@ class AttemptViewSet(viewsets.ModelViewSet):
         # Calculating points:
         attempt.points_obtained = self.calculate_points(attempt.assessment, attempt.score)
         best_attempt = (
-            Attempt.objects.filter(evaluacion=attempt.assessment, user=request.user)
+            Attempt.objects.filter(assessment=attempt.assessment, user=request.user)
             .exclude(pk=attempt.pk)
-            .order_by("-points")
+            .order_by("-points_obtained")
             .first()
         )
         user_points, created = UserPoints.objects.get_or_create(
@@ -168,7 +169,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
                 "detail": "Attempt finalized successfully.",
                 "score": attempt.score,
                 "approved": attempt.approved,
-                "points": attempt.points,
+                "points_obtained": attempt.points_obtained,
             },
             status=status.HTTP_200_OK,
         )
