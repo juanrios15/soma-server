@@ -4,8 +4,18 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
+from .models import (
+    Language,
+    Category,
+    Subcategory,
+    Assessment,
+    Question,
+    Choice,
+    AssessmentDifficultyRating,
+    FollowAssessment,
+)
 from .serializers import (
+    LanguageSerializer,
     CategorySerializer,
     SubcategorySerializer,
     AssessmentSerializer,
@@ -35,8 +45,16 @@ def validate_question(question):
     return None
 
 
+class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Language.objects.all().order_by("id")
+    serializer_class = LanguageSerializer
+    filterset_fields = {
+        "name": ("exact", "icontains"),
+    }
+
+
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all().order_by('id')
+    queryset = Category.objects.all().order_by("id")
     serializer_class = CategorySerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
@@ -44,7 +62,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class SubcategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Subcategory.objects.all().order_by('id')
+    queryset = Subcategory.objects.all().order_by("id")
     serializer_class = SubcategorySerializer
     filterset_fields = {
         "category": ("exact", "in"),
@@ -58,6 +76,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "name": ("exact", "icontains"),
         "user": ("exact", "in"),
+        "language": ("exact", "in"),
         "subcategory": ("exact", "in"),
         "number_of_questions": ("exact", "gte", "lte"),
         "allowed_attempts": ("exact", "gte", "lte"),
@@ -70,7 +89,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         "average_score": ("gte", "lte"),
         "attempts_count": ("gte", "lte"),
     }
-    ordering_fields = ["attempts_count", "difficulty", "user_difficulty_rating", "average_score"]
+    ordering_fields = ["attempts_count", "difficulty", "user_difficulty_rating", "average_score", "created_at"]
 
     def get_serializer_class(self):
         if self.action == "retrieve":

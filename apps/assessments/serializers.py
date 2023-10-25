@@ -1,7 +1,22 @@
 from rest_framework import serializers
 
-from .models import Category, Subcategory, Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
+from .models import (
+    Language,
+    Category,
+    Subcategory,
+    Assessment,
+    Question,
+    Choice,
+    AssessmentDifficultyRating,
+    FollowAssessment,
+)
 from apps.attempts.models import Attempt
+
+
+class LanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Language
+        fields = "__all__"
 
 
 class SubcategoryReadOnlySerializer(serializers.ModelSerializer):

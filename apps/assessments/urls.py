@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework import routers
 
 from .views import (
+    LanguageViewSet,
     CategoryViewSet,
     SubcategoryViewSet,
     AssessmentViewSet,
@@ -15,6 +16,7 @@ from .views import (
 app_name = "assessments"
 
 router = routers.DefaultRouter()
+router.register(r"languages", LanguageViewSet, basename="languages")
 router.register(r"categories", CategoryViewSet, basename="categories")
 router.register(r"subcategories", SubcategoryViewSet, basename="subcategories")
 router.register(r"assessments", AssessmentViewSet, basename="assessments")
