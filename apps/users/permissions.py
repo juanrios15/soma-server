@@ -3,7 +3,7 @@ from rest_framework import permissions
 
 class CustomUserPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        if view.action == "create":
+        if view.action in ["create", "send_reset_code", "reset_password"]:
             return True
         return request.user.is_authenticated
 

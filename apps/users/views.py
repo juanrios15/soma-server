@@ -1,8 +1,20 @@
+import random
+import string
+
+from django.core.mail import send_mail
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .serializers import UserSerializer, UserDetailSerializer, UserMeSerializer, FollowSerializer, UserPointsSerializer
+from .serializers import (
+    UserSerializer,
+    UserDetailSerializer,
+    UserMeSerializer,
+    FollowSerializer,
+    UserPointsSerializer,
+    PasswordResetSerializer,
+)
 from .models import CustomUser, Follow, UserPoints
 from .permissions import CustomUserPermissions, FollowPermissions
 
@@ -24,6 +36,47 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.action == "me":
             return UserMeSerializer
         return UserSerializer
+
+    @action(detail=False, methods=["post"])
+    def send_reset_code(self, request, pk=None):
+        email = request.data.get("email")
+
+        if not email:
+            return Response({"error": "Email is required."}, status=400)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+        except ObjectDoesNotExist:
+            return Response({"error": "User not found."}, status=404)
+        reset_code = "".join(random.choices(string.ascii_letters + string.digits, k=6))
+
+        user.reset_code = reset_code
+        user.save()
+
+        send_mail(
+            "Reset your password",
+            f"Use the following code to reset your password: {reset_code}. Access http://localhost:5173/resetpassword to proceed.",
+            "juankrios15@gmail.com",
+            [user.email],
+            fail_silently=False,
+        )
+        return Response({"message": "Reset code sent to email."})
+
+    @action(detail=False, methods=["post"])
+    def reset_password(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            reset_code = serializer.validated_data["reset_code"]
+            try:
+                user = CustomUser.objects.get(reset_code=reset_code)
+            except CustomUser.DoesNotExist:
+                return Response({"detail": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(serializer.validated_data["password"])
+            user.reset_code = None
+            user.save()
+            return Response({"message": "Password reset successfully.", "username": user.email})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request, *args, **kwargs):

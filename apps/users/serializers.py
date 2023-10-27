@@ -133,6 +133,11 @@ class UserMeSerializer(serializers.ModelSerializer):
         return None
 
 
+class PasswordResetSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        fields = ("password", "password2", "reset_code")
+
+
 class UserPointsSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPoints

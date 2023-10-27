@@ -37,6 +37,7 @@ class CustomUser(AbstractUser):
     updated_time = models.DateField(auto_now=True)
     average_score = models.FloatField(default=0)
     points = models.IntegerField(default=0)
+    reset_code = models.CharField(max_length=7, null=True, blank=True)
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"

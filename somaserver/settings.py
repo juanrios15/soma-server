@@ -41,7 +41,7 @@ DEBUG = get_secret("DEBUG")
 
 ALLOWED_HOSTS = []
 
-SITE_URL = 'http://localhost.com:8000'
+SITE_URL = "http://localhost.com:8000"
 
 # Application definition
 
@@ -166,3 +166,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+
+# Email config:
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_USE_TLS = get_secret("EMAIL_USE_TLS")
+EMAIL_USE_SSL = get_secret("EMAIL_USE_SSL")
+EMAIL_PORT = get_secret("EMAIL_PORT")
+EMAIL_HOST = get_secret("EMAIL_HOST")
+EMAIL_HOST_USER = get_secret("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = get_secret("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = get_secret("DEFAULT_FROM_EMAIL")
