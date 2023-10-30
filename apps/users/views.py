@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from .serializers import (
     UserSerializer,
     UserDetailSerializer,
+    ReadOnlyUserSerializer,
     UserMeSerializer,
     FollowSerializer,
     UserPointsSerializer,
@@ -17,6 +18,17 @@ from .serializers import (
 )
 from .models import CustomUser, Follow, UserPoints
 from .permissions import CustomUserPermissions, FollowPermissions
+
+
+class ReadOnlyUserViewSet(viewsets.ModelViewSet):
+    serializer_class = ReadOnlyUserSerializer
+    queryset = CustomUser.objects.all()
+    filterset_fields = {
+        "username": ("exact", "in", "icontains"),
+        "average_score": ("exact", "gte", "lte"),
+        "points": ("exact", "gte", "lte"),
+    }
+    ordering_fields = ["points", "average_score"]
 
 
 class UserViewSet(viewsets.ModelViewSet):

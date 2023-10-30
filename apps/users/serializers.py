@@ -128,7 +128,6 @@ class UserMeSerializer(serializers.ModelSerializer):
     def get_picture(self, obj):
         if obj.profile_picture:
             request = self.context.get("request")
-            print("ponga", obj.profile_picture.url)
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
@@ -137,6 +136,19 @@ class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
 
+
+class ReadOnlyUserSerializer(serializers.ModelSerializer):
+    picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ["id", "username", "first_name", "last_name", "points", "average_score", "picture"]
+
+    def get_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
 
 class UserPointsSerializer(serializers.ModelSerializer):
     class Meta:

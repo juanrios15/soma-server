@@ -1,13 +1,14 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import UserViewSet, FollowViewSet, UserPointsViewSet
+from .views import UserViewSet, ReadOnlyUserViewSet, FollowViewSet, UserPointsViewSet
 
 
 app_name = "users"
 
 router = routers.DefaultRouter()
 router.register(r"users", UserViewSet, basename="users")
+router.register(r"topusers", ReadOnlyUserViewSet, basename="topusers")
 router.register(r"follows", FollowViewSet, basename="follows")
 router.register(r"userpoints", UserPointsViewSet, basename="userpoints")
 
