@@ -6,11 +6,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from django_countries import countries
 
 from .serializers import (
     UserSerializer,
     UserDetailSerializer,
     ReadOnlyUserSerializer,
+    UserEditSerializer,
     UserMeSerializer,
     FollowSerializer,
     UserPointsSerializer,
@@ -18,6 +21,11 @@ from .serializers import (
 )
 from .models import CustomUser, Follow, UserPoints
 from .permissions import CustomUserPermissions, FollowPermissions
+
+
+class CountryListView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response(countries)
 
 
 class ReadOnlyUserViewSet(viewsets.ModelViewSet):
@@ -47,6 +55,8 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserDetailSerializer
         elif self.action == "me":
             return UserMeSerializer
+        elif self.action in ["update", "partial_update"]:
+            return UserEditSerializer
         return UserSerializer
 
     @action(detail=False, methods=["post"])
@@ -82,12 +92,17 @@ class UserViewSet(viewsets.ModelViewSet):
             try:
                 user = CustomUser.objects.get(reset_code=reset_code)
             except CustomUser.DoesNotExist:
-                return Response({"detail": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": "Invalid reset code."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             user.set_password(serializer.validated_data["password"])
             user.reset_code = None
             user.save()
-            return Response({"message": "Password reset successfully.", "username": user.email})
+            return Response(
+                {"message": "Password reset successfully.", "username": user.email}
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["get"], url_path="me")
@@ -97,7 +112,9 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        serializer = self.get_serializer_class()(request.user, context={"request": request})
+        serializer = self.get_serializer_class()(
+            request.user, context={"request": request}
+        )
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="top-scores")
@@ -107,7 +124,9 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         top_users = CustomUser.objects.order_by("-average_score")[:20]
         # TODO: Usar un serializador con menos informacion para no consumir tanto...
-        serializer = UserDetailSerializer(top_users, many=True, context={"request": request})
+        serializer = UserDetailSerializer(
+            top_users, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
 

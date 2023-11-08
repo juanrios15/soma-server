@@ -6,6 +6,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.contrib.auth.models import AbstractUser, UserManager
 from rest_framework.authtoken.models import Token
+from django_countries.fields import CountryField
 
 from apps.assessments.models import Category
 
@@ -38,6 +39,7 @@ class CustomUser(AbstractUser):
     average_score = models.FloatField(default=0)
     points = models.IntegerField(default=0)
     reset_code = models.CharField(max_length=7, null=True, blank=True)
+    country = CountryField(blank=True, null=True)
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"

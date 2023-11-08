@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import UserViewSet, ReadOnlyUserViewSet, FollowViewSet, UserPointsViewSet
+from .views import UserViewSet, ReadOnlyUserViewSet, FollowViewSet, UserPointsViewSet, CountryListView
 
 
 app_name = "users"
@@ -14,4 +14,5 @@ router.register(r"userpoints", UserPointsViewSet, basename="userpoints")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path('countries/', CountryListView.as_view(), name='country-list'),
 ]

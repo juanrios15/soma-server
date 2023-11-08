@@ -1,32 +1,52 @@
 from django.db.models import Avg, Count, Case, When
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from django_countries.serializers import CountryFieldMixin
 
 from .models import Follow, UserPoints
 from apps.attempts.models import Attempt
 from apps.assessments.models import FollowAssessment
 
 
-class UserSerializer(serializers.ModelSerializer):
-    password2 = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+class UserSerializer(CountryFieldMixin, serializers.ModelSerializer):
+    password2 = serializers.CharField(
+        write_only=True, required=True, style={"input_type": "password"}
+    )
 
     class Meta:
         model = get_user_model()
-        fields = ("username", "email", "password", "password2", "average_score", "points")
-        extra_kwargs = {"password": {"write_only": True, "style": {"input_type": "password"}}}
+        fields = (
+            "username",
+            "email",
+            "password",
+            "password2",
+            "average_score",
+            "points",
+            "profile_picture",
+            "country",
+        )
+        extra_kwargs = {
+            "password": {"write_only": True, "style": {"input_type": "password"}}
+        }
 
     def validate_password(self, value):
         if len(value) < 8:
-            raise serializers.ValidationError("The password must be at least 8 characters long.")
+            raise serializers.ValidationError(
+                "The password must be at least 8 characters long."
+            )
 
         if not any(char.isdigit() for char in value):
-            raise serializers.ValidationError("The password must contain at least one number.")
+            raise serializers.ValidationError(
+                "The password must contain at least one number."
+            )
 
         return value
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError(
+                {"password": "Password fields didn't match."}
+            )
         return attrs
 
     def create(self, validated_data):
@@ -38,7 +58,8 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class UserDetailSerializer(serializers.ModelSerializer):
+class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
+    country_display = serializers.CharField(source="get_country_display", read_only=True)
     gender_display = serializers.CharField(source="get_gender_display", read_only=True)
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
@@ -56,12 +77,15 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "email",
+            "country",
+            "country_display",
             "first_name",
             "last_name",
             "date_joined",
             "birthday",
             "profile_picture",
             "biography",
+            "gender",
             "gender_display",
             "follower_count",
             "following_count",
@@ -90,13 +114,20 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return Follow.objects.filter(follower=obj, followed__is_active=True).count()
 
     def get_following_assessments_count(self, obj):
-        return FollowAssessment.objects.filter(follower=obj, assessment__is_active=True).count()
+        return FollowAssessment.objects.filter(
+            follower=obj, assessment__is_active=True
+        ).count()
 
     def get_attempts_count(self, obj):
         return self.get_attempt_statistics(obj)["total_attempts"]
 
     def get_average_score(self, obj):
-        return Attempt.objects.filter(user=obj).aggregate(average_score=Avg("score"))["average_score"] or 0
+        return (
+            Attempt.objects.filter(user=obj).aggregate(average_score=Avg("score"))[
+                "average_score"
+            ]
+            or 0
+        )
 
     def get_total_approved(self, obj):
         return self.get_attempt_statistics(obj)["total_approved"]
@@ -132,6 +163,20 @@ class UserMeSerializer(serializers.ModelSerializer):
         return None
 
 
+class UserEditSerializer(CountryFieldMixin, serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "first_name",
+            "last_name",
+            "gender",
+            "birthday",
+            "biography",
+            "profile_picture",
+            "country"
+        )
+
+
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
@@ -142,13 +187,22 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ["id", "username", "first_name", "last_name", "points", "average_score", "picture"]
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "points",
+            "average_score",
+            "picture",
+        ]
 
     def get_picture(self, obj):
         if obj.profile_picture:
             request = self.context.get("request")
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
+
 
 class UserPointsSerializer(serializers.ModelSerializer):
     class Meta:
