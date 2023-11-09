@@ -57,6 +57,7 @@ class UserPoints(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     total_points = models.PositiveIntegerField(default=0)
+    average_score = models.FloatField(null=True, blank=True)
 
     class Meta:
         unique_together = ("user", "category")

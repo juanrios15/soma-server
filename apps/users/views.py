@@ -154,5 +154,6 @@ class UserPointsViewSet(viewsets.ReadOnlyModelViewSet):
         "user": ("exact", "in"),
         "category": ("exact", "in"),
         "total_points": ("gte", "lte"),
+        "average_score": ("gte", "lte"),
     }
-    ordering_fields = ["total_points"]
+    ordering_fields = ["total_points", "average_score"]

@@ -84,14 +84,16 @@ class AttemptViewSet(viewsets.ModelViewSet):
         assessment.average_score = avg_score or 0
         assessment.save()
 
-    def update_user_average_score(self, user):
+    def update_user_average_score(self, user, user_points=None):
         """
-        Update the user's average score based on the best score for each assessment.
+        Update the user's average score based on all attempts.
         """
-        best_scores = Attempt.objects.filter(user=user).values("assessment").annotate(best_score=Max("score"))
-        average_score = best_scores.aggregate(avg_best_score=Avg("best_score"))["avg_best_score"] or 0
-        user.average_score = average_score
+        user.average_score = Attempt.objects.filter(user=user).aggregate(avg_score=Avg("score"))['avg_score'] or 0
         user.save()
+        if user_points:
+            category_attempts = Attempt.objects.filter(user=user, assessment__subcategory__category=user_points.category)
+            user_points.average_score = category_attempts.aggregate(Avg('score'))['score__avg'] or 0
+            user_points.save()
 
     def calculate_points(self, assessment, score):
         """Helper function to calculate points based on the formula."""
@@ -162,7 +164,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
             user_points.save()
         attempt.is_finished = True
         attempt.save()
-        self.update_user_average_score(attempt.user)
+        self.update_user_average_score(attempt.user, user_points)
         self.update_assessment_average_score(attempt.assessment)
         return Response(
             {

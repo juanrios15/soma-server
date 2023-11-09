@@ -182,7 +182,8 @@ class PasswordResetSerializer(UserSerializer):
         fields = ("password", "password2", "reset_code")
 
 
-class ReadOnlyUserSerializer(serializers.ModelSerializer):
+class ReadOnlyUserSerializer(CountryFieldMixin, serializers.ModelSerializer):
+    country_display = serializers.CharField(source="get_country_display", read_only=True)
     picture = serializers.SerializerMethodField()
 
     class Meta:
@@ -192,6 +193,8 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "country",
+            "country_display",
             "points",
             "average_score",
             "picture",
@@ -205,9 +208,14 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
 
 
 class UserPointsSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source="user.username")
+    country_display = serializers.SerializerMethodField()
     class Meta:
         model = UserPoints
         fields = "__all__"
+
+    def get_country_display(self, obj):
+        return obj.user.country.name
 
 
 class FollowSerializer(serializers.ModelSerializer):
