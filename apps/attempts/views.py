@@ -43,7 +43,8 @@ class AttemptViewSet(viewsets.ModelViewSet):
             raise ValidationError("You cannot attempt your own assessment.")
 
         previous_attempts_count = Attempt.objects.filter(assessment=assessment, user=self.request.user).count()
-        if previous_attempts_count >= assessment.allowed_attempts:
+        perfect_score_exists = Attempt.objects.filter(assessment=assessment, user=self.request.user, score=100).exists()
+        if previous_attempts_count >= assessment.allowed_attempts or perfect_score_exists:
             raise ValidationError("You don't have any attempts left for this assessment.")
         assessment.attempts_count = Attempt.objects.filter(assessment=assessment).count() + 1
         self.update_assessment_average_score(assessment)
@@ -88,11 +89,13 @@ class AttemptViewSet(viewsets.ModelViewSet):
         """
         Update the user's average score based on all attempts.
         """
-        user.average_score = Attempt.objects.filter(user=user).aggregate(avg_score=Avg("score"))['avg_score'] or 0
+        user.average_score = Attempt.objects.filter(user=user).aggregate(avg_score=Avg("score"))["avg_score"] or 0
         user.save()
         if user_points:
-            category_attempts = Attempt.objects.filter(user=user, assessment__subcategory__category=user_points.category)
-            user_points.average_score = category_attempts.aggregate(Avg('score'))['score__avg'] or 0
+            category_attempts = Attempt.objects.filter(
+                user=user, assessment__subcategory__category=user_points.category
+            )
+            user_points.average_score = category_attempts.aggregate(Avg("score"))["score__avg"] or 0
             user_points.save()
 
     def calculate_points(self, assessment, score):

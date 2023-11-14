@@ -9,9 +9,7 @@ from apps.assessments.models import FollowAssessment
 
 
 class UserSerializer(CountryFieldMixin, serializers.ModelSerializer):
-    password2 = serializers.CharField(
-        write_only=True, required=True, style={"input_type": "password"}
-    )
+    password2 = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
 
     class Meta:
         model = get_user_model()
@@ -25,28 +23,20 @@ class UserSerializer(CountryFieldMixin, serializers.ModelSerializer):
             "profile_picture",
             "country",
         )
-        extra_kwargs = {
-            "password": {"write_only": True, "style": {"input_type": "password"}}
-        }
+        extra_kwargs = {"password": {"write_only": True, "style": {"input_type": "password"}}}
 
     def validate_password(self, value):
         if len(value) < 8:
-            raise serializers.ValidationError(
-                "The password must be at least 8 characters long."
-            )
+            raise serializers.ValidationError("The password must be at least 8 characters long.")
 
         if not any(char.isdigit() for char in value):
-            raise serializers.ValidationError(
-                "The password must contain at least one number."
-            )
+            raise serializers.ValidationError("The password must contain at least one number.")
 
         return value
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
-            )
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
         return attrs
 
     def create(self, validated_data):
@@ -70,6 +60,7 @@ class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
     approved_percentage = serializers.SerializerMethodField()
     full_score_percentage = serializers.SerializerMethodField()
     is_self = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -96,6 +87,7 @@ class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
             "approved_percentage",
             "full_score_percentage",
             "is_self",
+            "is_following",
         ]
 
     def get_attempt_statistics(self, obj):
@@ -114,20 +106,13 @@ class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
         return Follow.objects.filter(follower=obj, followed__is_active=True).count()
 
     def get_following_assessments_count(self, obj):
-        return FollowAssessment.objects.filter(
-            follower=obj, assessment__is_active=True
-        ).count()
+        return FollowAssessment.objects.filter(follower=obj, assessment__is_active=True).count()
 
     def get_attempts_count(self, obj):
         return self.get_attempt_statistics(obj)["total_attempts"]
 
     def get_average_score(self, obj):
-        return (
-            Attempt.objects.filter(user=obj).aggregate(average_score=Avg("score"))[
-                "average_score"
-            ]
-            or 0
-        )
+        return Attempt.objects.filter(user=obj).aggregate(average_score=Avg("score"))["average_score"] or 0
 
     def get_total_approved(self, obj):
         return self.get_attempt_statistics(obj)["total_approved"]
@@ -147,6 +132,13 @@ class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
     def get_is_self(self, obj):
         user = self.context.get("request").user
         return user == obj
+
+    def get_is_following(self, obj):
+        user = self.context.get("request").user
+        if user and user.is_authenticated:
+            follow_id = Follow.objects.filter(followed=obj, follower=user).values_list("id", flat=True).first()
+            return follow_id if follow_id is not None else False
+        return None
 
 
 class UserMeSerializer(serializers.ModelSerializer):
@@ -210,6 +202,7 @@ class ReadOnlyUserSerializer(CountryFieldMixin, serializers.ModelSerializer):
 class UserPointsSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source="user.username")
     country_display = serializers.SerializerMethodField()
+
     class Meta:
         model = UserPoints
         fields = "__all__"
