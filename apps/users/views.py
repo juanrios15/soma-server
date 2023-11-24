@@ -1,13 +1,17 @@
 import random
 import string
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.authtoken.models import Token
 from django_countries import countries
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 from .serializers import (
     UserSerializer,
@@ -60,6 +64,33 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     @action(detail=False, methods=["post"])
+    def google_login(self, request):
+        google_id = request.data.get("google_id")
+        email = request.data.get("email")
+        if not google_id:
+            return Response({"error": "Token is required."}, status=400)
+
+        try:
+            idinfo = id_token.verify_oauth2_token(google_id, requests.Request(), settings.GOOGLE_CLIENT_ID)
+            if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
+                raise ValueError("Wrong issuer.")
+
+            if email != idinfo["email"]:
+                return Response({"error": "Email mismatch."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                user = CustomUser.objects.get(email=email)
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({"token": token.key})
+            except CustomUser.DoesNotExist:
+                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"])
     def send_reset_code(self, request, pk=None):
         email = request.data.get("email")
 
@@ -100,9 +131,7 @@ class UserViewSet(viewsets.ModelViewSet):
             user.set_password(serializer.validated_data["password"])
             user.reset_code = None
             user.save()
-            return Response(
-                {"message": "Password reset successfully.", "username": user.email}
-            )
+            return Response({"message": "Password reset successfully.", "username": user.email})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=["get"], url_path="me")
@@ -112,9 +141,7 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        serializer = self.get_serializer_class()(
-            request.user, context={"request": request}
-        )
+        serializer = self.get_serializer_class()(request.user, context={"request": request})
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="top-scores")
@@ -124,9 +151,7 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         top_users = CustomUser.objects.order_by("-average_score")[:20]
         # TODO: Usar un serializador con menos informacion para no consumir tanto...
-        serializer = UserDetailSerializer(
-            top_users, many=True, context={"request": request}
-        )
+        serializer = UserDetailSerializer(top_users, many=True, context={"request": request})
         return Response(serializer.data)
 
 
