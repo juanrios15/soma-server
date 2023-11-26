@@ -7,6 +7,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
+from rest_framework.views import APIView
 
 from .models import Attempt, QuestionAttempt
 from .serializers import AttemptSerializer, QuestionAttemptSerializer
@@ -205,3 +206,11 @@ class QuestionAttemptViewSet(viewsets.ModelViewSet):
 
         is_correct = correct_choices_ids == selected_choices_ids
         serializer.save(is_correct=is_correct)
+
+
+class GlobalStatsAPIView(APIView):
+    def get(self, request, format=None):
+        total_attempts = Attempt.objects.count()
+        total_assessments = Assessment.objects.filter(is_active=True).count()
+        stats_data = {"total_attempts": total_attempts, "total_assessments": total_assessments}
+        return Response(stats_data, status=status.HTTP_200_OK)

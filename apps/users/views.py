@@ -4,6 +4,7 @@ import string
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.base import ContentFile
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from rest_framework.authtoken.models import Token
 from django_countries import countries
 from google.oauth2 import id_token
 from google.auth.transport import requests
+import requests as http_requests
 
 from .serializers import (
     UserSerializer,
@@ -64,26 +66,33 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     @action(detail=False, methods=["post"])
-    def google_login(self, request):
+    def google_auth(self, request):
         google_id = request.data.get("google_id")
-        email = request.data.get("email")
         if not google_id:
-            return Response({"error": "Token is required."}, status=400)
-
+            return Response({"error": "Google ID is required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             idinfo = id_token.verify_oauth2_token(google_id, requests.Request(), settings.GOOGLE_CLIENT_ID)
             if idinfo["iss"] not in ["accounts.google.com", "https://accounts.google.com"]:
                 raise ValueError("Wrong issuer.")
 
-            if email != idinfo["email"]:
-                return Response({"error": "Email mismatch."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                user = CustomUser.objects.get(email=email)
-                token, created = Token.objects.get_or_create(user=user)
-                return Response({"token": token.key})
-            except CustomUser.DoesNotExist:
-                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            email = idinfo["email"]
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    "first_name": idinfo.get("given_name", ""),
+                    "last_name": idinfo.get("family_name", ""),
+                    "username": email.split("@")[0],
+                },
+            )
+
+            if created and idinfo.get("picture", ""):
+                response = http_requests.get(idinfo["picture"])
+                if response.status_code == 200:
+                    user.profile_picture.save(f"{user.username}_profile.jpg", ContentFile(response.content), save=True)
+
+            token, token_created = Token.objects.get_or_create(user=user)
+            return Response({"token": token.key, "user_id": user.id, "is_new": created})
+
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
