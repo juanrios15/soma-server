@@ -42,6 +42,7 @@ class SubcategorySerializer(serializers.ModelSerializer):
 class AssessmentSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
     subcategory_name = serializers.ReadOnlyField(source="subcategory.name")
+    subcategory_image = serializers.ImageField(source="subcategory.image", required=False, allow_null=True, use_url=True)
 
     class Meta:
         model = Assessment
