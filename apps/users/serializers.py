@@ -50,6 +50,7 @@ class UserSerializer(CountryFieldMixin, serializers.ModelSerializer):
 
 class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
     country_display = serializers.CharField(source="get_country_display", read_only=True)
+    country_flag = serializers.ReadOnlyField(source="country.flag")
     gender_display = serializers.CharField(source="get_gender_display", read_only=True)
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
@@ -70,6 +71,7 @@ class UserDetailSerializer(CountryFieldMixin, serializers.ModelSerializer):
             "email",
             "country",
             "country_display",
+            "country_flag",
             "first_name",
             "last_name",
             "date_joined",
